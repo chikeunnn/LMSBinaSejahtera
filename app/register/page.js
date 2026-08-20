@@ -63,7 +63,9 @@ export default function RegisterPage() {
 
       if (signUpError) {
         if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')) {
-          setError('Email ini sudah terdaftar. Silakan masuk menggunakan email Anda.');
+          setError('Email ini sudah terdaftar. Silakan masuk menggunakan email Anda di halaman Login.');
+        } else if (signUpError.message.toLowerCase().includes('rate limit')) {
+          setError('Batas pendaftaran email Supabase tercapai (Email Rate Limit Exceeded). Anda dapat menggunakan akun Demo langsung di halaman Login atau mencoba beberapa saat lagi.');
         } else if (signUpError.message.includes('Database error')) {
           setError('Terjadi kendala konfigurasi database. Pastikan script setup Supabase telah dijalankan.');
         } else {
@@ -102,7 +104,7 @@ export default function RegisterPage() {
 
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, zIndex: 1 }}>
-          <HeaderLogos size={44} />
+          <HeaderLogos size={56} />
           <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
             <BookOpen size={24} color="white" />
           </div>
@@ -132,7 +134,7 @@ export default function RegisterPage() {
         <div style={{ width: '100%', maxWidth: 420 }}>
           {/* Mobile logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }} className="mobile-logo-show">
-            <HeaderLogos size={36} />
+            <HeaderLogos size={48} />
             <div style={{ width: 36, height: 36, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BookOpen size={20} color="white" />
             </div>

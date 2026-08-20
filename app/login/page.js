@@ -112,7 +112,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30, zIndex: 1 }}>
-          <HeaderLogos size={48} />
+          <HeaderLogos size={56} />
           <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
             <BookOpen size={26} color="white" />
           </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: 460 }}>
           {/* Mobile logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }} className="mobile-logo-show">
-            <HeaderLogos size={40} />
+            <HeaderLogos size={48} />
             <div style={{ width: 40, height: 40, background: 'var(--primary)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BookOpen size={22} color="white" />
             </div>

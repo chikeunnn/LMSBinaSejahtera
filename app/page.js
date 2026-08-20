@@ -57,7 +57,7 @@ export default function LandingPage() {
           
           {/* Logo & Name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <HeaderLogos size={36} />
+            <HeaderLogos size={52} />
             <div style={{ width: 36, height: 36, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <BookOpen size={18} color="white" />
             </div>

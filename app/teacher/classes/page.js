@@ -87,24 +87,44 @@ export default function TeacherClassesPage() {
 
     try {
       if (editingClass) {
-        const { error } = await supabase.from('classes').update({
+        let { error } = await supabase.from('classes').update({
           name: cleanName,
           grade: parseInt(form.grade),
           code: classCode,
           academic_year: form.academic_year
         }).eq('id', editingClass.id);
 
-        if (error) throw error;
+        if (error && (error.message.includes('code') || error.code === 'PGRST204')) {
+          const { error: errFallback } = await supabase.from('classes').update({
+            name: cleanName,
+            grade: parseInt(form.grade),
+            academic_year: form.academic_year
+          }).eq('id', editingClass.id);
+          if (errFallback) throw errFallback;
+        } else if (error) {
+          throw error;
+        }
+
         setMessage(`Berhasil memperbarui ${cleanName}!`);
       } else {
-        const { error } = await supabase.from('classes').insert({
+        let { error } = await supabase.from('classes').insert({
           name: cleanName,
           grade: parseInt(form.grade),
           code: classCode,
           academic_year: form.academic_year
         });
 
-        if (error) throw error;
+        if (error && (error.message.includes('code') || error.code === 'PGRST204')) {
+          const { error: errFallback } = await supabase.from('classes').insert({
+            name: cleanName,
+            grade: parseInt(form.grade),
+            academic_year: form.academic_year
+          });
+          if (errFallback) throw errFallback;
+        } else if (error) {
+          throw error;
+        }
+
         setMessage(`Berhasil menambahkan ${cleanName} baru!`);
       }
 
@@ -112,7 +132,7 @@ export default function TeacherClassesPage() {
       fetchData();
     } catch (err) {
       console.error(err);
-      alert('Gagal menyimpan kelas: ' + err.message);
+      alert('Gagal menyimpan kelas: ' + (err.message || 'Terjadi kesalahan pada database.'));
     } finally {
       setSaving(false);
     }

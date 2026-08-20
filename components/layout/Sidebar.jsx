@@ -71,7 +71,7 @@ export default function Sidebar({ role, open, onClose }) {
       {/* Logo Header */}
       <div className="sidebar-logo">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-          <HeaderLogos size={36} />
+          <HeaderLogos size={52} />
           <div style={{ width: 36, height: 36, background: 'var(--primary)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <BookOpen size={20} color="#fff" />
           </div>

@@ -145,30 +145,64 @@ export default function AdminClassesPage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSaving(true);
+    setMessage('');
     const supabase = createClient();
 
-    const classCode = form.code.trim().toUpperCase() || `K${form.grade}-${form.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`;
+    const cleanName = form.name.trim();
+    const classCode = form.code.trim().toUpperCase() || `K${form.grade}-${cleanName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`;
 
     try {
       if (editingClass) {
-        await supabase.from('classes').update({
-          name: form.name.trim(),
+        // Coba update dengan code dulu
+        let { error } = await supabase.from('classes').update({
+          name: cleanName,
           grade: parseInt(form.grade),
           code: classCode,
           academic_year: form.academic_year
         }).eq('id', editingClass.id);
+
+        // Fallback jika kolom 'code' belum ada di database
+        if (error && (error.message.includes('code') || error.code === 'PGRST204')) {
+          const { error: errFallback } = await supabase.from('classes').update({
+            name: cleanName,
+            grade: parseInt(form.grade),
+            academic_year: form.academic_year
+          }).eq('id', editingClass.id);
+          if (errFallback) throw errFallback;
+        } else if (error) {
+          throw error;
+        }
+
+        setMessage(`Berhasil memperbarui ${cleanName}!`);
       } else {
-        await supabase.from('classes').insert({
-          name: form.name.trim(),
+        // Coba insert dengan code
+        let { error } = await supabase.from('classes').insert({
+          name: cleanName,
           grade: parseInt(form.grade),
           code: classCode,
           academic_year: form.academic_year
         });
+
+        // Fallback jika kolom 'code' belum ada di database
+        if (error && (error.message.includes('code') || error.code === 'PGRST204')) {
+          const { error: errFallback } = await supabase.from('classes').insert({
+            name: cleanName,
+            grade: parseInt(form.grade),
+            academic_year: form.academic_year
+          });
+          if (errFallback) throw errFallback;
+        } else if (error) {
+          throw error;
+        }
+
+        setMessage(`Berhasil menambahkan ${cleanName} baru!`);
       }
+
       setModalOpen(false);
       fetchData();
     } catch (err) {
       console.error(err);
+      alert('Gagal menyimpan kelas: ' + (err.message || 'Terjadi kesalahan pada database.'));
     } finally {
       setSaving(false);
     }

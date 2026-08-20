@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <HeaderLogos size={36} />
+          <HeaderLogos size={48} />
           <div className="auth-logo-icon"><BookOpen size={28} color="#fff" /></div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>LMS Bina Sejahtera</div>
         </div>
