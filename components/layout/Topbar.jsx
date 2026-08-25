@@ -45,13 +45,8 @@ export default function Topbar({ profile: propProfile, unreadCount = 0, onMenuCl
         }}
       >
         <Menu size={20} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }} className="desktop-only">Menu</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>Menu</span>
       </button>
-
-      {/* Institutional Logos in Topbar Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8 }} className="desktop-only">
-        <HeaderLogos size={32} />
-      </div>
 
       <div style={{ flex: 1 }} />
 

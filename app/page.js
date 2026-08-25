@@ -56,17 +56,20 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           
           {/* Logo & Name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <HeaderLogos size={52} />
-            <div style={{ width: 36, height: 36, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <BookOpen size={18} color="white" />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div className="brand-title" style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
-                LMS Bina Sejahtera
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            <HeaderLogos size={36} />
+            <div className="desktop-only" style={{ height: 28, width: 1, background: 'var(--border)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <BookOpen size={18} color="white" />
               </div>
-              <div className="brand-subtext" style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                Learning Management System
+              <div style={{ minWidth: 0 }} className="desktop-only">
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                  LMS Bina Sejahtera
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  Learning Management System
+                </div>
               </div>
             </div>
           </div>

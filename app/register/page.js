@@ -102,15 +102,14 @@ export default function RegisterPage() {
         <div style={{ position: 'absolute', top: -80, right: -80, width: 300, height: 300, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
         <div style={{ position: 'absolute', bottom: -100, left: -60, width: 360, height: 360, background: 'rgba(255,255,255,0.04)', borderRadius: '50%' }} />
 
-        {/* Logo */}
+        {/* Logo Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, zIndex: 1 }}>
-          <HeaderLogos size={56} />
-          <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <BookOpen size={24} color="white" />
           </div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'white', lineHeight: 1.2 }}>LMS Bina Sejahtera</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Learning Management System</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Learning Management System</div>
           </div>
         </div>
 
@@ -133,13 +132,12 @@ export default function RegisterPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 32px', overflowY: 'auto' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           {/* Mobile logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }} className="mobile-logo-show">
-            <HeaderLogos size={48} />
-            <div style={{ width: 36, height: 36, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BookOpen size={20} color="white" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }} className="mobile-logo-show">
+            <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(37,99,235,0.25)' }}>
+              <BookOpen size={22} color="white" />
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)' }}>LMS Bina Sejahtera</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>LMS Bina Sejahtera</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Learning Management System</div>
             </div>
           </div>

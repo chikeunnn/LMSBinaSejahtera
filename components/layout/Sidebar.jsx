@@ -69,45 +69,33 @@ export default function Sidebar({ role, open, onClose }) {
   return (
     <aside className={`app-sidebar ${open ? 'open' : ''}`}>
       {/* Logo Header */}
-      <div className="sidebar-logo" style={{ height: 'auto', padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
-        {/* Top Row: LMS Brand + Portal Label + Close Button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)',
-              borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(37,99,235,0.25)', flexShrink: 0
-            }}>
-              <BookOpen size={20} color="#fff" />
-            </div>
-            <div>
-              <div className="sidebar-logo-text" style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)', lineHeight: 1.2 }}>LMS Bina Sejahtera</div>
-              <div className="sidebar-logo-sub" style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{ROLE_LABELS[role]} Portal</div>
-            </div>
+      <div className="sidebar-logo" style={{ height: 'var(--topbar-height)', padding: '0 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 38, height: 38, background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)',
+            borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 3px 10px rgba(37,99,235,0.25)', flexShrink: 0
+          }}>
+            <BookOpen size={20} color="#fff" />
           </div>
-
-          <button
-            onClick={onClose}
-            style={{
-              background: '#F1F5F9', border: '1px solid #CBD5E1',
-              borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 6, transition: 'all 0.15s', flexShrink: 0
-            }}
-            title="Tutup Menu Sidebar"
-          >
-            <PanelLeftClose size={18} />
-          </button>
+          <div>
+            <div className="sidebar-logo-text" style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)', lineHeight: 1.2 }}>LMS Bina Sejahtera</div>
+            <div className="sidebar-logo-sub" style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{ROLE_LABELS[role]} Portal</div>
+          </div>
         </div>
 
-        {/* Bottom Row: Official Institutional Logos */}
-        <div style={{
-          background: '#F8FAFC', borderRadius: 8, padding: '6px 10px',
-          border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'center', alignItems: 'center',
-          overflow: 'hidden'
-        }}>
-          <HeaderLogos size={28} />
-        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: '#F1F5F9', border: '1px solid #CBD5E1',
+            borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 6, transition: 'all 0.15s', flexShrink: 0
+          }}
+          title="Tutup Menu Sidebar"
+        >
+          <PanelLeftClose size={18} />
+        </button>
       </div>
 
       {/* Nav Items (Stay open even when clicked or when main screen is clicked) */}
