@@ -96,9 +96,16 @@ export default function AdminStudentsPage() {
           uniqueClassesMap.set(cleanName, c);
         }
       });
+      const clsList = Array.from(uniqueClassesMap.values());
+      const profs = profData || [];
 
-      setStudents(profData || []);
-      setClasses(Array.from(uniqueClassesMap.values()));
+      setStudents(profs);
+      setClasses(clsList);
+
+      const unassigned = profs.filter(s => getStudentClassInfo(s, clsList).grade === null);
+      if (unassigned.length > 0) {
+        handleAutoAssign();
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -199,33 +206,40 @@ export default function AdminStudentsPage() {
     const supabase = createClient();
     setAssigning(true);
     try {
-      let activeClasses = classes;
-      if (!activeClasses || activeClasses.length === 0) {
-        const { data: created } = await supabase.from('classes').insert([
-          { name: 'Kelas 7A', grade: 7, code: 'K7A' },
-          { name: 'Kelas 8A', grade: 8, code: 'K8A' },
-          { name: 'Kelas 9A', grade: 9, code: 'K9A' }
-        ]).select();
-        activeClasses = created || [];
+      let c7 = classes.find(c => c.grade === 7 || String(c.name).includes('7'));
+      let c8 = classes.find(c => c.grade === 8 || String(c.name).includes('8'));
+      let c9 = classes.find(c => c.grade === 9 || String(c.name).includes('9'));
+
+      const toCreate = [];
+      if (!c7) toCreate.push({ name: 'Kelas 7A', grade: 7, code: 'K7A' });
+      if (!c8) toCreate.push({ name: 'Kelas 8A', grade: 8, code: 'K8A' });
+      if (!c9) toCreate.push({ name: 'Kelas 9A', grade: 9, code: 'K9A' });
+
+      if (toCreate.length > 0) {
+        const { data: created } = await supabase.from('classes').insert(toCreate).select();
+        const combined = [...classes, ...(created || [])];
+        c7 = c7 || combined.find(c => c.grade === 7 || String(c.name).includes('7'));
+        c8 = c8 || combined.find(c => c.grade === 8 || String(c.name).includes('8'));
+        c9 = c9 || combined.find(c => c.grade === 9 || String(c.name).includes('9'));
       }
 
-      const unassignedStudents = students.filter(s => getStudentClassInfo(s, activeClasses).grade === null);
-      if (unassignedStudents.length === 0) {
-        alert('Semua siswa sudah terbagi ke dalam kelas!');
-        return;
-      }
+      const gradeClasses = [c7, c8, c9].filter(Boolean);
+      if (gradeClasses.length === 0) return;
 
-      for (let i = 0; i < unassignedStudents.length; i++) {
-        const s = unassignedStudents[i];
-        const targetClass = activeClasses[i % activeClasses.length];
-        await supabase.from('profiles').update({
-          class_id: targetClass.id,
-          updated_at: new Date().toISOString()
-        }).eq('id', s.id);
+      for (let i = 0; i < students.length; i++) {
+        const s = students[i];
+        const targetClass = gradeClasses[i % gradeClasses.length];
+        await supabase
+          .from('profiles')
+          .update({
+            class_id: targetClass.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', s.id);
       }
 
       await fetchData();
-      alert(`Berhasil membagikan ${unassignedStudents.length} siswa secara merata ke dalam Kelas 7, Kelas 8, dan Kelas 9!`);
+      alert(`Berhasil membagikan ${students.length} siswa secara SEIMBANG ke dalam Kelas 7, Kelas 8, dan Kelas 9!`);
     } catch (e) {
       console.error(e);
       alert('Gagal membagikan kelas secara otomatis.');

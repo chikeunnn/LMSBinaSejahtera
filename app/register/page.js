@@ -15,28 +15,35 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     role: 'student',
-    classId: ''
+    classId: '',
+    subjectCode: ''
   });
   const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    async function fetchClasses() {
+    async function fetchOptions() {
       try {
         const supabase = createClient();
-        const { data } = await supabase.from('classes').select('*').order('name', { ascending: true });
-        if (data && data.length > 0) {
-          setClasses(data);
-          setForm(f => ({ ...f, classId: data[0].id }));
+        const [{ data: clsData }, { data: subjData }] = await Promise.all([
+          supabase.from('classes').select('*').order('name', { ascending: true }),
+          supabase.from('subjects').select('*, profiles(full_name)').order('name', { ascending: true })
+        ]);
+
+        if (clsData && clsData.length > 0) {
+          setClasses(clsData);
+          setForm(f => ({ ...f, classId: clsData[0].id }));
         }
+        setSubjects(subjData || []);
       } catch (err) {
         console.error(err);
       }
     }
-    fetchClasses();
+    fetchOptions();
   }, []);
 
   const handleChange = (e) => {
@@ -249,36 +256,67 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Class Select for Students */}
+              {/* Class & Subject Select for Students */}
               {form.role === 'student' && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="classId" style={{ fontSize: 12, marginBottom: 4 }}>Pilih Kelas Siswa *</label>
-                  <div className="input-wrapper">
-                    <GraduationCap size={16} className="input-icon" />
-                    <select
-                      id="classId"
-                      name="classId"
-                      required
-                      className="form-input input-with-icon"
-                      value={form.classId || ''}
-                      onChange={handleChange}
-                      disabled={loading}
-                      style={{ padding: '8px 12px 8px 40px', fontSize: 13 }}
-                    >
-                      {classes.length > 0 ? (
-                        classes.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="kelas-7">Kelas 7</option>
-                          <option value="kelas-8">Kelas 8</option>
-                          <option value="kelas-9">Kelas 9</option>
-                        </>
-                      )}
-                    </select>
+                <>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="classId" style={{ fontSize: 12, marginBottom: 4, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Pilih Tingkat Kelas Siswa *
+                    </label>
+                    <div className="input-wrapper">
+                      <GraduationCap size={16} className="input-icon" />
+                      <select
+                        id="classId"
+                        name="classId"
+                        required
+                        className="form-input input-with-icon"
+                        value={form.classId || ''}
+                        onChange={handleChange}
+                        disabled={loading}
+                        style={{ padding: '8px 12px 8px 40px', fontSize: 13 }}
+                      >
+                        {classes.length > 0 ? (
+                          classes.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="kelas-7">Kelas 7</option>
+                            <option value="kelas-8">Kelas 8</option>
+                            <option value="kelas-9">Kelas 9</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
                   </div>
-                </div>
+
+                  {subjects.length > 0 && (
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="subjectCode" style={{ fontSize: 12, marginBottom: 4, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Pilih Kode Mata Pelajaran / Guru Pengajar (Opsional)
+                      </label>
+                      <div className="input-wrapper">
+                        <BookOpen size={16} className="input-icon" />
+                        <select
+                          id="subjectCode"
+                          name="subjectCode"
+                          className="form-input input-with-icon"
+                          value={form.subjectCode || ''}
+                          onChange={handleChange}
+                          disabled={loading}
+                          style={{ padding: '8px 12px 8px 40px', fontSize: 13 }}
+                        >
+                          <option value="">-- Pilih Mata Pelajaran & Guru (Opsional) --</option>
+                          {subjects.map(s => (
+                            <option key={s.id} value={s.code || s.id}>
+                              {s.name} {s.code ? `[Kode: ${s.code}]` : ''} - Guru: {s.profiles?.full_name || 'Pengajar'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Email */}

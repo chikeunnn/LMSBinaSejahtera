@@ -7,19 +7,17 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Search, Filter, GraduationCap, AlertCircle, Sparkles } from 'lucide-react';
+import { Users, Search, Filter, GraduationCap, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 
 function getStudentClassInfo(student, classesList = []) {
   if (!student) return { name: 'Belum Ada Kelas', grade: null };
 
-  // 1. Direct object join from Supabase
   if (student.classes && student.classes.name) {
     const clsName = student.classes.name;
     const grade = student.classes.grade || extractGradeNum(clsName);
     return { name: clsName, grade };
   }
 
-  // 2. Lookup in classesList by class_id
   if (student.class_id) {
     const found = classesList.find(c =>
       String(c.id) === String(student.class_id) ||
@@ -38,7 +36,6 @@ function getStudentClassInfo(student, classesList = []) {
     return { name: String(student.class_id), grade: extractGradeNum(student.class_id) };
   }
 
-  // 3. Lookup by class_name
   if (student.class_name) {
     const g = extractGradeNum(student.class_name);
     return { name: student.class_name, grade: g };
@@ -80,8 +77,18 @@ export default function TeacherStudentsPage() {
         supabase.from('profiles').select('*, classes(id, name, grade)').eq('role', 'student').order('full_name', { ascending: true }),
         supabase.from('classes').select('*').order('name', { ascending: true })
       ]);
-      setStudents(stdData || []);
-      setClasses(clsData || []);
+
+      const profs = stdData || [];
+      const cls = clsData || [];
+
+      setStudents(profs);
+      setClasses(cls);
+
+      // Auto balance if any student has no class assigned
+      const unassigned = profs.filter(s => getStudentClassInfo(s, cls).grade === null);
+      if (unassigned.length > 0) {
+        autoBalanceStudents(profs, cls);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -89,41 +96,54 @@ export default function TeacherStudentsPage() {
     }
   }
 
-  // Auto assign unassigned students evenly into classes (7, 8, 9)
-  async function handleAutoAssign() {
+  // Auto assign/balance ALL students evenly across Grade 7, Grade 8, and Grade 9
+  async function autoBalanceStudents(stdList = students, clsList = classes) {
     const supabase = createClient();
     setAssigning(true);
     try {
-      let activeClasses = classes;
-      if (!activeClasses || activeClasses.length === 0) {
-        const { data: created } = await supabase.from('classes').insert([
-          { name: 'Kelas 7A', grade: 7, code: 'K7A' },
-          { name: 'Kelas 8A', grade: 8, code: 'K8A' },
-          { name: 'Kelas 9A', grade: 9, code: 'K9A' }
-        ]).select();
-        activeClasses = created || [];
+      let c7 = clsList.find(c => c.grade === 7 || String(c.name).includes('7'));
+      let c8 = clsList.find(c => c.grade === 8 || String(c.name).includes('8'));
+      let c9 = clsList.find(c => c.grade === 9 || String(c.name).includes('9'));
+
+      const toCreate = [];
+      if (!c7) toCreate.push({ name: 'Kelas 7A', grade: 7, code: 'K7A' });
+      if (!c8) toCreate.push({ name: 'Kelas 8A', grade: 8, code: 'K8A' });
+      if (!c9) toCreate.push({ name: 'Kelas 9A', grade: 9, code: 'K9A' });
+
+      if (toCreate.length > 0) {
+        const { data: created } = await supabase.from('classes').insert(toCreate).select();
+        const combined = [...clsList, ...(created || [])];
+        c7 = c7 || combined.find(c => c.grade === 7 || String(c.name).includes('7'));
+        c8 = c8 || combined.find(c => c.grade === 8 || String(c.name).includes('8'));
+        c9 = c9 || combined.find(c => c.grade === 9 || String(c.name).includes('9'));
       }
 
-      const unassignedStudents = students.filter(s => getStudentClassInfo(s, activeClasses).grade === null);
-      if (unassignedStudents.length === 0) {
-        alert('Semua siswa sudah terbagi ke dalam kelas!');
-        return;
+      const gradeClasses = [c7, c8, c9].filter(Boolean);
+      if (gradeClasses.length === 0) return;
+
+      const targetList = stdList.length > 0 ? stdList : students;
+
+      for (let i = 0; i < targetList.length; i++) {
+        const s = targetList[i];
+        const targetClass = gradeClasses[i % gradeClasses.length];
+        await supabase
+          .from('profiles')
+          .update({
+            class_id: targetClass.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', s.id);
       }
 
-      for (let i = 0; i < unassignedStudents.length; i++) {
-        const s = unassignedStudents[i];
-        const targetClass = activeClasses[i % activeClasses.length];
-        await supabase.from('profiles').update({
-          class_id: targetClass.id,
-          updated_at: new Date().toISOString()
-        }).eq('id', s.id);
-      }
-
-      await fetchData();
-      alert(`Berhasil membagikan ${unassignedStudents.length} siswa secara merata ke dalam Kelas 7, Kelas 8, dan Kelas 9!`);
+      // Refresh updated list
+      const [{ data: refreshedStds }, { data: refreshedCls }] = await Promise.all([
+        supabase.from('profiles').select('*, classes(id, name, grade)').eq('role', 'student').order('full_name', { ascending: true }),
+        supabase.from('classes').select('*').order('name', { ascending: true })
+      ]);
+      setStudents(refreshedStds || []);
+      setClasses(refreshedCls || []);
     } catch (e) {
-      console.error(e);
-      alert('Gagal membagikan kelas secara otomatis.');
+      console.error('Error auto balancing students:', e);
     } finally {
       setAssigning(false);
     }
@@ -138,7 +158,7 @@ export default function TeacherStudentsPage() {
     const matchesSearch = (s.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (s.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (s.nis || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (!matchesSearch) return false;
 
     if (selectedClassFilter === 'ALL') return true;
@@ -146,7 +166,7 @@ export default function TeacherStudentsPage() {
     if (['7', '8', '9'].includes(selectedClassFilter)) {
       return getStudentClassInfo(s, classes).grade === parseInt(selectedClassFilter);
     }
-    
+
     return String(s.class_id) === String(selectedClassFilter);
   });
 
@@ -160,17 +180,15 @@ export default function TeacherStudentsPage() {
           </p>
         </div>
 
-        {countUnassigned > 0 && (
-          <button
-            onClick={handleAutoAssign}
-            disabled={assigning}
-            className="btn btn-primary btn-sm"
-            style={{ gap: 6, background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}
-          >
-            <Sparkles size={16} />
-            {assigning ? 'Membagikan Kelas...' : `Bagi ${countUnassigned} Siswa ke Kelas 7, 8, 9`}
-          </button>
-        )}
+        <button
+          onClick={() => autoBalanceStudents()}
+          disabled={assigning}
+          className="btn btn-primary btn-sm"
+          style={{ gap: 6, background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}
+        >
+          <Sparkles size={16} />
+          {assigning ? 'Membagikan Kelas Seimbang...' : '⚡ Bagi Siswa Seimbang (Kelas 7, 8, 9)'}
+        </button>
       </div>
 
       {/* Metrics Row - Total + Grades breakdown */}
@@ -216,12 +234,12 @@ export default function TeacherStudentsPage() {
         </div>
 
         <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertCircle size={22} />
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: countUnassigned > 0 ? '#FEE2E2' : '#E0F2FE', color: countUnassigned > 0 ? '#DC2626' : '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {countUnassigned > 0 ? <AlertCircle size={22} /> : <CheckCircle2 size={22} />}
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{countUnassigned}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Belum Masuk Kelas</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{countUnassigned > 0 ? 'Belum Masuk Kelas' : 'Status Pembagian: Rapi'}</div>
           </div>
         </div>
       </div>
