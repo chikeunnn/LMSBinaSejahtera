@@ -15,6 +15,50 @@ import {
   CheckCircle2, Server, HardDrive, RefreshCw, BarChart3, ArrowUpRight
 } from 'lucide-react';
 
+function getStudentClassInfo(student, classesList = []) {
+  if (!student) return { name: 'Belum Ada Kelas', grade: null };
+
+  if (student.classes && student.classes.name) {
+    const clsName = student.classes.name;
+    const grade = student.classes.grade || extractGradeNum(clsName);
+    return { name: clsName, grade };
+  }
+
+  if (student.class_id) {
+    const found = classesList.find(c =>
+      String(c.id) === String(student.class_id) ||
+      String(c.name).toLowerCase() === String(student.class_id).toLowerCase() ||
+      String(c.code).toLowerCase() === String(student.class_id).toLowerCase()
+    );
+
+    if (found) {
+      const grade = found.grade || extractGradeNum(found.name);
+      return { name: found.name, grade };
+    }
+
+    const g = extractGradeNum(student.class_id);
+    if (g) return { name: `Kelas ${g}`, grade: g };
+
+    return { name: String(student.class_id), grade: extractGradeNum(student.class_id) };
+  }
+
+  if (student.class_name) {
+    const g = extractGradeNum(student.class_name);
+    return { name: student.class_name, grade: g };
+  }
+
+  return { name: 'Belum Ada Kelas', grade: null };
+}
+
+function extractGradeNum(str) {
+  if (!str) return null;
+  const s = String(str);
+  if (s.includes('7')) return 7;
+  if (s.includes('8')) return 8;
+  if (s.includes('9')) return 9;
+  return null;
+}
+
 export default function AdminDashboard() {
   const { profile } = useProfile();
   const { unreadCount } = useNotifications();
@@ -84,7 +128,8 @@ export default function AdminDashboard() {
       ]);
 
       const profs = allProfiles || [];
-      const stdCount = profs.filter(p => p.role === 'student').length;
+      const studentProfiles = profs.filter(p => p.role === 'student');
+      const stdCount = studentProfiles.length;
       const tchCount = profs.filter(p => p.role === 'teacher').length;
       const admCount = profs.filter(p => p.role === 'admin').length;
 
@@ -97,8 +142,17 @@ export default function AdminDashboard() {
       });
       const uniqueCls = Array.from(uniqueClassesMap.values());
 
+      const g7 = studentProfiles.filter(s => getStudentClassInfo(s, uniqueCls).grade === 7).length;
+      const g8 = studentProfiles.filter(s => getStudentClassInfo(s, uniqueCls).grade === 8).length;
+      const g9 = studentProfiles.filter(s => getStudentClassInfo(s, uniqueCls).grade === 9).length;
+      const gUnassigned = studentProfiles.filter(s => getStudentClassInfo(s, uniqueCls).grade === null).length;
+
       setStats({
         students: stdCount,
+        studentsG7: g7,
+        studentsG8: g8,
+        studentsG9: g9,
+        studentsUnassigned: gUnassigned,
         teachers: tchCount,
         admins: admCount,
         classes: uniqueCls.length,
@@ -500,7 +554,7 @@ export default function AdminDashboard() {
                       </td>
 
                       <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>
-                        {u.role === 'student' ? (u.classes?.name || 'Tanpa Kelas') : u.role === 'teacher' ? 'Tenaga Pengajar' : 'Administrator'}
+                        {u.role === 'student' ? getStudentClassInfo(u, classes).name : u.role === 'teacher' ? 'Tenaga Pengajar' : 'Administrator'}
                       </td>
 
                       <td style={{ padding: '14px 20px' }}>

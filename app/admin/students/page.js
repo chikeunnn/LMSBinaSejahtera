@@ -9,7 +9,51 @@ import SearchInput from '@/components/ui/SearchInput';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { GraduationCap, UserPlus, Edit, Trash2, BookOpen, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, UserPlus, Edit, Trash2, Users, AlertCircle, Filter } from 'lucide-react';
+
+function getStudentClassInfo(student, classesList = []) {
+  if (!student) return { name: 'Belum Ada Kelas', grade: null };
+
+  if (student.classes && student.classes.name) {
+    const clsName = student.classes.name;
+    const grade = student.classes.grade || extractGradeNum(clsName);
+    return { name: clsName, grade };
+  }
+
+  if (student.class_id) {
+    const found = classesList.find(c =>
+      String(c.id) === String(student.class_id) ||
+      String(c.name).toLowerCase() === String(student.class_id).toLowerCase() ||
+      String(c.code).toLowerCase() === String(student.class_id).toLowerCase()
+    );
+
+    if (found) {
+      const grade = found.grade || extractGradeNum(found.name);
+      return { name: found.name, grade };
+    }
+
+    const g = extractGradeNum(student.class_id);
+    if (g) return { name: `Kelas ${g}`, grade: g };
+
+    return { name: String(student.class_id), grade: extractGradeNum(student.class_id) };
+  }
+
+  if (student.class_name) {
+    const g = extractGradeNum(student.class_name);
+    return { name: student.class_name, grade: g };
+  }
+
+  return { name: 'Belum Ada Kelas', grade: null };
+}
+
+function extractGradeNum(str) {
+  if (!str) return null;
+  const s = String(str);
+  if (s.includes('7')) return 7;
+  if (s.includes('8')) return 8;
+  if (s.includes('9')) return 9;
+  return null;
+}
 
 export default function AdminStudentsPage() {
   const { profile } = useProfile();
@@ -61,6 +105,9 @@ export default function AdminStudentsPage() {
       setLoading(false);
     }
   }
+
+  const countGrade = (gradeNum) => students.filter(s => getStudentClassInfo(s, classes).grade === gradeNum).length;
+  const countUnassigned = students.filter(s => getStudentClassInfo(s, classes).grade === null).length;
 
   const handleOpenModal = (s = null) => {
     if (s) {
@@ -135,8 +182,15 @@ export default function AdminStudentsPage() {
   const filteredStudents = students.filter(s => {
     const matchesSearch = (s.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
                           (s.email || '').toLowerCase().includes(search.toLowerCase());
-    const matchesClass = selectedClass === 'ALL' || s.class_id === selectedClass;
-    return matchesSearch && matchesClass;
+
+    if (!matchesSearch) return false;
+    if (selectedClass === 'ALL') return true;
+    if (selectedClass === 'UNASSIGNED') return getStudentClassInfo(s, classes).grade === null;
+    if (['7', '8', '9'].includes(selectedClass)) {
+      return getStudentClassInfo(s, classes).grade === parseInt(selectedClass);
+    }
+
+    return String(s.class_id) === String(selectedClass);
   });
 
   return (
@@ -145,12 +199,65 @@ export default function AdminStudentsPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>Manajemen Siswa & Pemetaan Kelas</h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
-            Kelola data siswa terdaftar dan pembagian kelas di sekolah
+            Kelola data siswa terdaftar dan pembagian kelas di sekolah (Admin Control)
           </p>
         </div>
         <button onClick={() => handleOpenModal()} className="btn btn-primary btn-sm" style={{ gap: 6 }}>
           <UserPlus size={16} /> Tambah Akun Siswa
         </button>
+      </div>
+
+      {/* Metrics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
+        <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>{students.length}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total Siswa</div>
+          </div>
+        </div>
+
+        <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>{countGrade(7)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Siswa Kelas 7</div>
+          </div>
+        </div>
+
+        <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>{countGrade(8)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Siswa Kelas 8</div>
+          </div>
+        </div>
+
+        <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>{countGrade(9)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Siswa Kelas 9</div>
+          </div>
+        </div>
+
+        <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertCircle size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>{countUnassigned}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Belum Masuk Kelas</div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -161,11 +268,16 @@ export default function AdminStudentsPage() {
 
         <select
           className="form-input"
-          style={{ width: 'auto', minWidth: 160 }}
+          style={{ width: 'auto', minWidth: 180 }}
           value={selectedClass}
           onChange={e => setSelectedClass(e.target.value)}
         >
           <option value="ALL">Semua Kelas</option>
+          <option value="7">Siswa Kelas 7</option>
+          <option value="8">Siswa Kelas 8</option>
+          <option value="9">Siswa Kelas 9</option>
+          <option value="UNASSIGNED">Belum Masuk Kelas</option>
+          {classes.length > 0 && <option disabled>── Rombel Khusus ──</option>}
           {classes.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -191,6 +303,9 @@ export default function AdminStudentsPage() {
               <tbody>
                 {filteredStudents.map(s => {
                   const isActive = s.is_active !== false;
+                  const classInfo = getStudentClassInfo(s, classes);
+                  const isAssigned = classInfo.grade !== null || classInfo.name !== 'Belum Ada Kelas';
+
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '14px 20px' }}>
@@ -204,8 +319,16 @@ export default function AdminStudentsPage() {
                       </td>
 
                       <td style={{ padding: '14px 20px' }}>
-                        <span className="badge badge-primary" style={{ fontSize: 12 }}>
-                          🏫 {s.classes?.name || 'Tanpa Kelas'}
+                        <span
+                          className="badge"
+                          style={{
+                            fontSize: 12,
+                            background: isAssigned ? '#EFF6FF' : '#FEF2F2',
+                            color: isAssigned ? '#2563EB' : '#DC2626',
+                            fontWeight: 700
+                          }}
+                        >
+                          🏫 {classInfo.name}
                         </span>
                       </td>
 
