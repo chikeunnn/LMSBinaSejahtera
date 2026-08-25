@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, BookOpen, UserPlus, CheckCircle, GraduationCap, UserCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { LoginIllustration } from '@/components/ui/Illustrations';
-import HeaderLogos from '@/components/ui/HeaderLogos';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,12 +14,30 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student'
+    role: 'student',
+    classId: ''
   });
+  const [classes, setClasses] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    async function fetchClasses() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.from('classes').select('*').order('name', { ascending: true });
+        if (data && data.length > 0) {
+          setClasses(data);
+          setForm(f => ({ ...f, classId: data[0].id }));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchClasses();
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -31,6 +48,10 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!form.fullName || !form.email || !form.password) {
       setError('Harap isi semua kolom wajib.');
+      return;
+    }
+    if (form.role === 'student' && !form.classId && classes.length > 0) {
+      setError('Pilih kelas Anda (Kelas 7, Kelas 8, atau Kelas 9).');
       return;
     }
     if (form.password.length < 6) {
@@ -49,6 +70,7 @@ export default function RegisterPage() {
       const supabase = createClient();
       const cleanEmail = form.email.trim();
       const cleanName = form.fullName.trim();
+      const selectedClassId = form.role === 'student' ? (form.classId || null) : null;
 
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
@@ -56,7 +78,8 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: cleanName,
-            role: form.role
+            role: form.role,
+            class_id: selectedClassId
           }
         }
       });
@@ -72,6 +95,17 @@ export default function RegisterPage() {
           setError('Gagal mendaftar: ' + signUpError.message);
         }
         return;
+      }
+
+      if (data?.user) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: cleanName,
+          role: form.role,
+          class_id: selectedClassId,
+          updated_at: new Date().toISOString()
+        });
       }
 
       if (data.session) {
@@ -197,7 +231,7 @@ export default function RegisterPage() {
 
               {/* Full Name */}
               <div className="form-group">
-                <label className="form-label" htmlFor="fullName" style={{ fontSize: 12, marginBottom: 4 }}>Nama Lengkap</label>
+                <label className="form-label" htmlFor="fullName" style={{ fontSize: 12, marginBottom: 4 }}>Nama Lengkap *</label>
                 <div className="input-wrapper">
                   <User size={16} className="input-icon" />
                   <input
@@ -215,9 +249,41 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              {/* Class Select for Students */}
+              {form.role === 'student' && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="classId" style={{ fontSize: 12, marginBottom: 4 }}>Pilih Kelas Siswa *</label>
+                  <div className="input-wrapper">
+                    <GraduationCap size={16} className="input-icon" />
+                    <select
+                      id="classId"
+                      name="classId"
+                      required
+                      className="form-input input-with-icon"
+                      value={form.classId || ''}
+                      onChange={handleChange}
+                      disabled={loading}
+                      style={{ padding: '8px 12px 8px 40px', fontSize: 13 }}
+                    >
+                      {classes.length > 0 ? (
+                        classes.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="kelas-7">Kelas 7</option>
+                          <option value="kelas-8">Kelas 8</option>
+                          <option value="kelas-9">Kelas 9</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {/* Email */}
               <div className="form-group">
-                <label className="form-label" htmlFor="email" style={{ fontSize: 12, marginBottom: 4 }}>Alamat Email</label>
+                <label className="form-label" htmlFor="email" style={{ fontSize: 12, marginBottom: 4 }}>Alamat Email *</label>
                 <div className="input-wrapper">
                   <Mail size={16} className="input-icon" />
                   <input
@@ -237,7 +303,7 @@ export default function RegisterPage() {
 
               {/* Password */}
               <div className="form-group">
-                <label className="form-label" htmlFor="password" style={{ fontSize: 12, marginBottom: 4 }}>Password (Minimal 6 karakter)</label>
+                <label className="form-label" htmlFor="password" style={{ fontSize: 12, marginBottom: 4 }}>Password (Minimal 6 karakter) *</label>
                 <div className="input-wrapper">
                   <Lock size={16} className="input-icon" />
                   <input
@@ -260,7 +326,7 @@ export default function RegisterPage() {
 
               {/* Confirm Password */}
               <div className="form-group">
-                <label className="form-label" htmlFor="confirmPassword" style={{ fontSize: 12, marginBottom: 4 }}>Konfirmasi Password</label>
+                <label className="form-label" htmlFor="confirmPassword" style={{ fontSize: 12, marginBottom: 4 }}>Konfirmasi Password *</label>
                 <div className="input-wrapper">
                   <Lock size={16} className="input-icon" />
                   <input

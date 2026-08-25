@@ -193,6 +193,47 @@ export default function AdminStudentsPage() {
     return String(s.class_id) === String(selectedClass);
   });
 
+  const [assigning, setAssigning] = useState(false);
+
+  async function handleAutoAssign() {
+    const supabase = createClient();
+    setAssigning(true);
+    try {
+      let activeClasses = classes;
+      if (!activeClasses || activeClasses.length === 0) {
+        const { data: created } = await supabase.from('classes').insert([
+          { name: 'Kelas 7A', grade: 7, code: 'K7A' },
+          { name: 'Kelas 8A', grade: 8, code: 'K8A' },
+          { name: 'Kelas 9A', grade: 9, code: 'K9A' }
+        ]).select();
+        activeClasses = created || [];
+      }
+
+      const unassignedStudents = students.filter(s => getStudentClassInfo(s, activeClasses).grade === null);
+      if (unassignedStudents.length === 0) {
+        alert('Semua siswa sudah terbagi ke dalam kelas!');
+        return;
+      }
+
+      for (let i = 0; i < unassignedStudents.length; i++) {
+        const s = unassignedStudents[i];
+        const targetClass = activeClasses[i % activeClasses.length];
+        await supabase.from('profiles').update({
+          class_id: targetClass.id,
+          updated_at: new Date().toISOString()
+        }).eq('id', s.id);
+      }
+
+      await fetchData();
+      alert(`Berhasil membagikan ${unassignedStudents.length} siswa secara merata ke dalam Kelas 7, Kelas 8, dan Kelas 9!`);
+    } catch (e) {
+      console.error(e);
+      alert('Gagal membagikan kelas secara otomatis.');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
   return (
     <DashboardLayout profile={profile} unreadCount={unreadCount}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
@@ -202,9 +243,21 @@ export default function AdminStudentsPage() {
             Kelola data siswa terdaftar dan pembagian kelas di sekolah (Admin Control)
           </p>
         </div>
-        <button onClick={() => handleOpenModal()} className="btn btn-primary btn-sm" style={{ gap: 6 }}>
-          <UserPlus size={16} /> Tambah Akun Siswa
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {countUnassigned > 0 && (
+            <button
+              onClick={handleAutoAssign}
+              disabled={assigning}
+              className="btn btn-outline btn-sm"
+              style={{ gap: 6 }}
+            >
+              ✨ {assigning ? 'Membagikan Kelas...' : `Bagi ${countUnassigned} Siswa ke Kelas 7, 8, 9`}
+            </button>
+          )}
+          <button onClick={() => handleOpenModal()} className="btn btn-primary btn-sm" style={{ gap: 6 }}>
+            <UserPlus size={16} /> Tambah Akun Siswa
+          </button>
+        </div>
       </div>
 
       {/* Metrics Row */}

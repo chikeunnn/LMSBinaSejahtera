@@ -7,7 +7,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Search, Filter, GraduationCap, AlertCircle } from 'lucide-react';
+import { Users, Search, Filter, GraduationCap, AlertCircle, Sparkles } from 'lucide-react';
 
 function getStudentClassInfo(student, classesList = []) {
   if (!student) return { name: 'Belum Ada Kelas', grade: null };
@@ -65,6 +65,7 @@ export default function TeacherStudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -88,6 +89,46 @@ export default function TeacherStudentsPage() {
     }
   }
 
+  // Auto assign unassigned students evenly into classes (7, 8, 9)
+  async function handleAutoAssign() {
+    const supabase = createClient();
+    setAssigning(true);
+    try {
+      let activeClasses = classes;
+      if (!activeClasses || activeClasses.length === 0) {
+        const { data: created } = await supabase.from('classes').insert([
+          { name: 'Kelas 7A', grade: 7, code: 'K7A' },
+          { name: 'Kelas 8A', grade: 8, code: 'K8A' },
+          { name: 'Kelas 9A', grade: 9, code: 'K9A' }
+        ]).select();
+        activeClasses = created || [];
+      }
+
+      const unassignedStudents = students.filter(s => getStudentClassInfo(s, activeClasses).grade === null);
+      if (unassignedStudents.length === 0) {
+        alert('Semua siswa sudah terbagi ke dalam kelas!');
+        return;
+      }
+
+      for (let i = 0; i < unassignedStudents.length; i++) {
+        const s = unassignedStudents[i];
+        const targetClass = activeClasses[i % activeClasses.length];
+        await supabase.from('profiles').update({
+          class_id: targetClass.id,
+          updated_at: new Date().toISOString()
+        }).eq('id', s.id);
+      }
+
+      await fetchData();
+      alert(`Berhasil membagikan ${unassignedStudents.length} siswa secara merata ke dalam Kelas 7, Kelas 8, dan Kelas 9!`);
+    } catch (e) {
+      console.error(e);
+      alert('Gagal membagikan kelas secara otomatis.');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
   // Grade Counts
   const countGrade = (gradeNum) => students.filter(s => getStudentClassInfo(s, classes).grade === gradeNum).length;
   const countUnassigned = students.filter(s => getStudentClassInfo(s, classes).grade === null).length;
@@ -106,7 +147,6 @@ export default function TeacherStudentsPage() {
       return getStudentClassInfo(s, classes).grade === parseInt(selectedClassFilter);
     }
     
-    // Specific class_id match
     return String(s.class_id) === String(selectedClassFilter);
   });
 
@@ -119,6 +159,18 @@ export default function TeacherStudentsPage() {
             Pantau dan kelola seluruh siswa yang terdaftar berdasarkan tingkat kelas di LMS Bina Sejahtera
           </p>
         </div>
+
+        {countUnassigned > 0 && (
+          <button
+            onClick={handleAutoAssign}
+            disabled={assigning}
+            className="btn btn-primary btn-sm"
+            style={{ gap: 6, background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}
+          >
+            <Sparkles size={16} />
+            {assigning ? 'Membagikan Kelas...' : `Bagi ${countUnassigned} Siswa ke Kelas 7, 8, 9`}
+          </button>
+        )}
       </div>
 
       {/* Metrics Row - Total + Grades breakdown */}
