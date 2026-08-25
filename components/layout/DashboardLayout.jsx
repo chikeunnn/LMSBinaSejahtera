@@ -14,6 +14,22 @@ export default function DashboardLayout({ children, profile, unreadCount = 0 }) 
   return (
     <ToastProvider>
       <div className={`app-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
+        {/* Backdrop Overlay for mobile navigation */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 95,
+              transition: 'all 0.2s ease'
+            }}
+          />
+        )}
+
         <Sidebar
           role={role}
           open={sidebarOpen}

@@ -8,6 +8,8 @@ import Avatar from '@/components/ui/Avatar';
 import { useProfile } from '@/hooks/useProfile';
 import { createClient } from '@/lib/supabase/client';
 
+import HeaderLogos from '@/components/ui/HeaderLogos';
+
 export default function Topbar({ profile: propProfile, unreadCount = 0, onMenuClick }) {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -39,11 +41,17 @@ export default function Topbar({ profile: propProfile, unreadCount = 0, onMenuCl
         style={{
           background: '#F8FAFC', border: '1px solid var(--border)', cursor: 'pointer',
           color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '8px', borderRadius: 'var(--radius-md)', transition: 'all 0.15s'
+          padding: '8px 12px', borderRadius: 'var(--radius-md)', transition: 'all 0.15s', gap: 6
         }}
       >
         <Menu size={20} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }} className="desktop-only">Menu</span>
       </button>
+
+      {/* Institutional Logos in Topbar Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8 }} className="desktop-only">
+        <HeaderLogos size={32} />
+      </div>
 
       <div style={{ flex: 1 }} />
 

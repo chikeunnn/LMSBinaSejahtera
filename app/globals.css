@@ -445,6 +445,7 @@ ul, ol { list-style: none; }
 @media (min-width: 1024px) {
   .mobile-menu-btn { display: none !important; }
   .desktop-only { display: block !important; }
+  .sidebar-backdrop { display: none !important; }
 }
 
 @media (max-width: 1200px) {
