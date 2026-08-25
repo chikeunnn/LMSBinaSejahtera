@@ -9,7 +9,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
 import { debounce, openOrDownloadFile } from '@/lib/utils';
-import { Video, PlayCircle, ExternalLink, Search, Clock, Maximize2, CheckCircle2, Play } from 'lucide-react';
+import { Video, PlayCircle, ExternalLink, Search, Clock, Maximize2, CheckCircle2, Play, Lock } from 'lucide-react';
 
 export default function StudentVideosPage() {
   const { profile } = useProfile();
@@ -31,18 +31,33 @@ export default function StudentVideosPage() {
     const supabase = createClient();
     setLoading(true);
     try {
+      if (!profile?.class_id) {
+        setVideos([]);
+        return;
+      }
+
+      const { data: classSubjects } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('class_id', profile.class_id);
+
+      const subjectIds = (classSubjects || []).map(s => s.id);
+
+      if (subjectIds.length === 0) {
+        setVideos([]);
+        return;
+      }
+
       const [{ data: vidData }, { data: vProgData }] = await Promise.all([
-        supabase.from('videos').select('*, subjects(name)').order('created_at', { ascending: false }),
+        supabase
+          .from('videos')
+          .select('*, subjects(name, class_id)')
+          .in('subject_id', subjectIds)
+          .order('created_at', { ascending: false }),
         supabase.from('video_progress').select('*').eq('student_id', profile.id)
       ]);
 
-      let finalData = vidData || [];
-      if (finalData.length === 0) {
-        const { data: rawData } = await supabase.from('videos').select('*').order('created_at', { ascending: false });
-        finalData = rawData || [];
-      }
-
-      setVideos(finalData);
+      setVideos(vidData || []);
 
       const vMap = {};
       (vProgData || []).forEach(p => {
@@ -117,20 +132,39 @@ export default function StudentVideosPage() {
           </p>
         </div>
 
-        <div className="input-wrapper" style={{ maxWidth: 300, width: '100%' }}>
-          <Search size={16} className="input-icon" />
-          <input
-            type="search"
-            className="form-input input-with-icon"
-            placeholder="Cari video..."
-            onChange={e => searchRef.current(e.target.value)}
-            aria-label="Cari video pembelajaran"
-          />
-        </div>
+        {profile?.class_id && (
+          <div className="input-wrapper" style={{ maxWidth: 300, width: '100%' }}>
+            <Search size={16} className="input-icon" />
+            <input
+              type="search"
+              className="form-input input-with-icon"
+              placeholder="Cari video..."
+              onChange={e => searchRef.current(e.target.value)}
+              aria-label="Cari video pembelajaran"
+            />
+          </div>
+        )}
       </div>
 
       {/* Videos Grid */}
-      {loading ? (
+      {!profile?.class_id ? (
+        <div className="card card-padding" style={{ textAlign: 'center', padding: '48px 24px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', borderRadius: 20, border: '1.5px solid #BFDBFE' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Lock size={32} />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Anda Belum Terdaftar di Kelas Mana Pun
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Untuk mengakses dan menonton video pembelajaran, Anda harus mendaftar atau memilih kelas Anda terlebih dahulu melalui kode kelas.
+          </p>
+          <Link href="/student/subjects">
+            <button className="btn btn-primary" style={{ padding: '10px 24px', fontSize: 14, gap: 8, fontWeight: 700 }}>
+              🎓 Pilih / Join Kelas Sekarang
+            </button>
+          </Link>
+        </div>
+      ) : loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {[1,2,3,4].map(i => (
             <div key={i} className="card" style={{ height: 280, borderRadius: 16, overflow: 'hidden' }}>
@@ -146,7 +180,7 @@ export default function StudentVideosPage() {
         <EmptyState
           icon={Video}
           title={search ? 'Video tidak ditemukan' : 'Belum Ada Video Pembelajaran'}
-          description={search ? `Tidak ada hasil video untuk "${search}"` : 'Guru Anda belum mengunggah video pembelajaran saat ini.'}
+          description={search ? `Tidak ada hasil video untuk "${search}"` : 'Guru Anda belum mengunggah video pembelajaran untuk kelas Anda.'}
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

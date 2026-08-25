@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { ClipboardList, Upload, CheckCircle2, Clock, AlertCircle, Send } from 'lucide-react';
+import { ClipboardList, Upload, CheckCircle2, Clock, AlertCircle, Send, Lock } from 'lucide-react';
 import { formatDateShort } from '@/lib/utils';
 
 export default function StudentAssignmentsPage() {
@@ -35,11 +36,27 @@ export default function StudentAssignmentsPage() {
     const supabase = createClient();
     setLoading(true);
     try {
-      let { data: asnData } = await supabase.from('assignments').select('*, subjects(name)').order('created_at', { ascending: false });
-      if (!asnData || asnData.length === 0) {
-        const { data: rawAsn } = await supabase.from('assignments').select('*').order('created_at', { ascending: false });
-        asnData = rawAsn || [];
+      if (!profile?.class_id) {
+        setAssignments([]);
+        return;
       }
+
+      const { data: classSubjects } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('class_id', profile.class_id);
+
+      const subjectIds = (classSubjects || []).map(s => s.id);
+      if (subjectIds.length === 0) {
+        setAssignments([]);
+        return;
+      }
+
+      const { data: asnData } = await supabase
+        .from('assignments')
+        .select('*, subjects(name)')
+        .in('subject_id', subjectIds)
+        .order('created_at', { ascending: false });
 
       const { data: submissData } = await supabase.from('assignment_submissions').select('*').eq('student_id', profile.id);
 
@@ -114,13 +131,30 @@ export default function StudentAssignmentsPage() {
         </p>
       </div>
 
-      {loading ? (
+      {!profile?.class_id ? (
+        <div className="card card-padding" style={{ textAlign: 'center', padding: '48px 24px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', borderRadius: 20, border: '1.5px solid #BFDBFE' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Lock size={32} />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Anda Belum Terdaftar di Kelas Mana Pun
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Untuk melihat dan mengumpulkan tugas sekolah, Anda harus mendaftar atau memilih kelas Anda terlebih dahulu melalui kode kelas.
+          </p>
+          <Link href="/student/subjects">
+            <button className="btn btn-primary" style={{ padding: '10px 24px', fontSize: 14, gap: 8, fontWeight: 700 }}>
+              🎓 Pilih / Join Kelas Sekarang
+            </button>
+          </Link>
+        </div>
+      ) : loading ? (
         <div className="skeleton" style={{ height: 200, borderRadius: 16 }} />
       ) : assignments.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
           title="Belum Ada Tugas Sekolah"
-          description="Saat ini belum ada tugas yang diberikan oleh guru Anda."
+          description="Saat ini belum ada tugas yang diberikan oleh guru kelas Anda."
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

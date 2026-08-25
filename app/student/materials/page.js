@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { FileText, Search, BookMarked, ArrowRight, Clock, FileDown, ExternalLink } from 'lucide-react';
+import { FileText, Search, BookMarked, ArrowRight, Clock, FileDown, Lock } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/ui/EmptyState';
 import { useProfile } from '@/hooks/useProfile';
@@ -28,15 +28,27 @@ export default function StudentMaterialsPage() {
     const supabase = createClient();
     setLoading(true);
     try {
-      let { data } = await supabase
+      if (!profile?.class_id) {
+        setMaterials([]);
+        return;
+      }
+
+      const { data: classSubjects } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('class_id', profile.class_id);
+
+      const subjectIds = (classSubjects || []).map(s => s.id);
+      if (subjectIds.length === 0) {
+        setMaterials([]);
+        return;
+      }
+
+      const { data } = await supabase
         .from('materials')
         .select('*, subjects(name)')
+        .in('subject_id', subjectIds)
         .order('created_at', { ascending: false });
-
-      if (!data || data.length === 0) {
-        const { data: rawData } = await supabase.from('materials').select('*').order('created_at', { ascending: false });
-        data = rawData || [];
-      }
 
       setMaterials(data || []);
     } catch (e) {
@@ -62,19 +74,38 @@ export default function StudentMaterialsPage() {
           </p>
         </div>
 
-        <div className="input-wrapper" style={{ maxWidth: 300, width: '100%' }}>
-          <Search size={16} className="input-icon" />
-          <input
-            type="search"
-            className="form-input input-with-icon"
-            placeholder="Cari materi..."
-            onChange={e => searchRef.current(e.target.value)}
-            aria-label="Cari materi"
-          />
-        </div>
+        {profile?.class_id && (
+          <div className="input-wrapper" style={{ maxWidth: 300, width: '100%' }}>
+            <Search size={16} className="input-icon" />
+            <input
+              type="search"
+              className="form-input input-with-icon"
+              placeholder="Cari materi..."
+              onChange={e => searchRef.current(e.target.value)}
+              aria-label="Cari materi"
+            />
+          </div>
+        )}
       </div>
 
-      {loading ? (
+      {!profile?.class_id ? (
+        <div className="card card-padding" style={{ textAlign: 'center', padding: '48px 24px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', borderRadius: 20, border: '1.5px solid #BFDBFE' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Lock size={32} />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Anda Belum Terdaftar di Kelas Mana Pun
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Untuk membaca dan mengunduh materi pembelajaran, Anda harus mendaftar atau memilih kelas Anda terlebih dahulu melalui kode kelas.
+          </p>
+          <Link href="/student/subjects">
+            <button className="btn btn-primary" style={{ padding: '10px 24px', fontSize: 14, gap: 8, fontWeight: 700 }}>
+              🎓 Pilih / Join Kelas Sekarang
+            </button>
+          </Link>
+        </div>
+      ) : loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {[1,2,3,4].map(i => (
             <div key={i} className="card card-padding">
@@ -88,7 +119,7 @@ export default function StudentMaterialsPage() {
         <EmptyState
           icon={FileText}
           title={search ? 'Materi tidak ditemukan' : 'Belum ada materi pembelajaran'}
-          description={search ? `Tidak ada materi dengan kata kunci "${search}"` : 'Materi yang diunggah oleh guru akan tampil di sini.'}
+          description={search ? `Tidak ada materi dengan kata kunci "${search}"` : 'Materi yang diunggah oleh guru kelas Anda akan tampil di sini.'}
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

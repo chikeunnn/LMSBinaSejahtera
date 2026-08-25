@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { HelpCircle, Clock, CheckCircle2, AlertCircle, Award, ChevronRight, RefreshCw } from 'lucide-react';
+import { HelpCircle, Clock, CheckCircle2, AlertCircle, Award, ChevronRight, RefreshCw, Lock } from 'lucide-react';
 
 export default function StudentQuizzesPage() {
   const { profile } = useProfile();
@@ -35,15 +36,27 @@ export default function StudentQuizzesPage() {
     const supabase = createClient();
     setLoading(true);
     try {
-      let { data } = await supabase
+      if (!profile?.class_id) {
+        setQuizzes([]);
+        return;
+      }
+
+      const { data: classSubjects } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('class_id', profile.class_id);
+
+      const subjectIds = (classSubjects || []).map(s => s.id);
+      if (subjectIds.length === 0) {
+        setQuizzes([]);
+        return;
+      }
+
+      const { data } = await supabase
         .from('quizzes')
         .select('*, subjects(name, class_id, code)')
+        .in('subject_id', subjectIds)
         .order('created_at', { ascending: false });
-
-      if (!data || data.length === 0) {
-        const { data: rawQuizzes } = await supabase.from('quizzes').select('*, subjects(name)');
-        data = rawQuizzes || [];
-      }
 
       setQuizzes(data || []);
     } catch (e) {
@@ -147,13 +160,30 @@ export default function StudentQuizzesPage() {
         </p>
       </div>
 
-      {loading ? (
+      {!profile?.class_id ? (
+        <div className="card card-padding" style={{ textAlign: 'center', padding: '48px 24px', background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)', borderRadius: 20, border: '1.5px solid #BFDBFE' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Lock size={32} />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Anda Belum Terdaftar di Kelas Mana Pun
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.6 }}>
+            Untuk mengakses kuis dan ujian interaktif, Anda harus mendaftar atau memilih kelas Anda terlebih dahulu melalui kode kelas.
+          </p>
+          <Link href="/student/subjects">
+            <button className="btn btn-primary" style={{ padding: '10px 24px', fontSize: 14, gap: 8, fontWeight: 700 }}>
+              🎓 Pilih / Join Kelas Sekarang
+            </button>
+          </Link>
+        </div>
+      ) : loading ? (
         <div className="skeleton" style={{ height: 200, borderRadius: 16 }} />
       ) : quizzes.length === 0 ? (
         <EmptyState
           icon={HelpCircle}
           title="Belum Ada Kuis Aktif"
-          description="Saat ini belum ada kuis yang diterbitkan oleh guru Anda."
+          description="Saat ini belum ada kuis yang diterbitkan oleh guru kelas Anda."
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
