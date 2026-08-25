@@ -50,21 +50,16 @@ export default function StudentSubjectsPage() {
     const supabase = createClient();
     setLoading(true);
     try {
-      let query = supabase.from('subjects').select('*, profiles(full_name)');
-      
-      if (profile.class_id) {
-        query = query.eq('class_id', profile.class_id);
+      if (!profile?.class_id) {
+        setSubjects([]);
+        return;
       }
 
-      let { data } = await query.order('name', { ascending: true });
-
-      if (!data || data.length === 0) {
-        const { data: fallbackData } = await supabase
-          .from('subjects')
-          .select('*, profiles(full_name)')
-          .order('name', { ascending: true });
-        data = fallbackData || [];
-      }
+      const { data } = await supabase
+        .from('subjects')
+        .select('*, profiles(full_name)')
+        .eq('class_id', profile.class_id)
+        .order('name', { ascending: true });
 
       setSubjects(data || []);
     } catch (e) {
@@ -188,7 +183,26 @@ export default function StudentSubjectsPage() {
           {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 16 }} />)}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={BookMarked} title="Tidak Ada Mata Pelajaran" description="Belum ada mata pelajaran untuk kelas Anda." />
+        <div className="card card-padding" style={{ textAlign: 'center', padding: '40px 24px', borderRadius: 16 }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#EFF6FF', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <BookMarked size={28} />
+          </div>
+          <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+            {profile?.class_id ? 'Belum Ada Mata Pelajaran Terdaftar' : 'Anda Belum Terdaftar Di Kelas Manapun'}
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 20px', lineHeight: 1.5 }}>
+            {profile?.class_id
+              ? 'Mata pelajaran untuk kelas Anda belum ditambahkan oleh guru. Hubungi wali kelas Anda.'
+              : 'Mata pelajaran hanya akan muncul sesuai kelas yang Anda pilih. Masukkan Kode Kelas resmi dari guru Anda untuk mulai belajar.'}
+          </p>
+          <button
+            onClick={() => { setJoinError(''); setJoinSuccess(''); setJoinModalOpen(true); }}
+            className="btn btn-primary btn-sm"
+            style={{ gap: 8 }}
+          >
+            <Key size={16} /> 🔑 Masukkan Kode Kelas Sekarang
+          </button>
+        </div>
       ) : (
         <div className="grid grid-3">
           {filtered.map((sub) => {
