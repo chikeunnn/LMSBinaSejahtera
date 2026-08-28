@@ -7,7 +7,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Search, Filter, GraduationCap, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Users, Search, Filter, GraduationCap, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 function getStudentClassInfo(student, classesList = []) {
   if (!student) return { name: 'Belum Ada Kelas', grade: null };
@@ -62,7 +62,6 @@ export default function TeacherStudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -78,17 +77,8 @@ export default function TeacherStudentsPage() {
         supabase.from('classes').select('*').order('name', { ascending: true })
       ]);
 
-      const profs = stdData || [];
-      const cls = clsData || [];
-
-      setStudents(profs);
-      setClasses(cls);
-
-      // Auto balance if any student has no class assigned
-      const unassigned = profs.filter(s => getStudentClassInfo(s, cls).grade === null);
-      if (unassigned.length > 0) {
-        autoBalanceStudents(profs, cls);
-      }
+      setStudents(stdData || []);
+      setClasses(clsData || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -96,60 +86,7 @@ export default function TeacherStudentsPage() {
     }
   }
 
-  // Auto assign/balance ALL students evenly across Grade 7, Grade 8, and Grade 9
-  async function autoBalanceStudents(stdList = students, clsList = classes) {
-    const supabase = createClient();
-    setAssigning(true);
-    try {
-      let c7 = clsList.find(c => c.grade === 7 || String(c.name).includes('7'));
-      let c8 = clsList.find(c => c.grade === 8 || String(c.name).includes('8'));
-      let c9 = clsList.find(c => c.grade === 9 || String(c.name).includes('9'));
-
-      const toCreate = [];
-      if (!c7) toCreate.push({ name: 'Kelas 7A', grade: 7, code: 'K7A' });
-      if (!c8) toCreate.push({ name: 'Kelas 8A', grade: 8, code: 'K8A' });
-      if (!c9) toCreate.push({ name: 'Kelas 9A', grade: 9, code: 'K9A' });
-
-      if (toCreate.length > 0) {
-        const { data: created } = await supabase.from('classes').insert(toCreate).select();
-        const combined = [...clsList, ...(created || [])];
-        c7 = c7 || combined.find(c => c.grade === 7 || String(c.name).includes('7'));
-        c8 = c8 || combined.find(c => c.grade === 8 || String(c.name).includes('8'));
-        c9 = c9 || combined.find(c => c.grade === 9 || String(c.name).includes('9'));
-      }
-
-      const gradeClasses = [c7, c8, c9].filter(Boolean);
-      if (gradeClasses.length === 0) return;
-
-      const targetList = stdList.length > 0 ? stdList : students;
-
-      for (let i = 0; i < targetList.length; i++) {
-        const s = targetList[i];
-        const targetClass = gradeClasses[i % gradeClasses.length];
-        await supabase
-          .from('profiles')
-          .update({
-            class_id: targetClass.id,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', s.id);
-      }
-
-      // Refresh updated list
-      const [{ data: refreshedStds }, { data: refreshedCls }] = await Promise.all([
-        supabase.from('profiles').select('*, classes(id, name, grade)').eq('role', 'student').order('full_name', { ascending: true }),
-        supabase.from('classes').select('*').order('name', { ascending: true })
-      ]);
-      setStudents(refreshedStds || []);
-      setClasses(refreshedCls || []);
-    } catch (e) {
-      console.error('Error auto balancing students:', e);
-    } finally {
-      setAssigning(false);
-    }
-  }
-
-  // Grade Counts
+  // Grade Counts based on actual registrations
   const countGrade = (gradeNum) => students.filter(s => getStudentClassInfo(s, classes).grade === gradeNum).length;
   const countUnassigned = students.filter(s => getStudentClassInfo(s, classes).grade === null).length;
 
@@ -172,26 +109,14 @@ export default function TeacherStudentsPage() {
 
   return (
     <DashboardLayout profile={profile} unreadCount={unreadCount}>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800 }}>Daftar Siswa Sekolah & Pembagian Kelas</h1>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
-            Pantau dan kelola seluruh siswa yang terdaftar berdasarkan tingkat kelas di LMS Bina Sejahtera
-          </p>
-        </div>
-
-        <button
-          onClick={() => autoBalanceStudents()}
-          disabled={assigning}
-          className="btn btn-primary btn-sm"
-          style={{ gap: 6, background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}
-        >
-          <Sparkles size={16} />
-          {assigning ? 'Membagikan Kelas Seimbang...' : '⚡ Bagi Siswa Seimbang (Kelas 7, 8, 9)'}
-        </button>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800 }}>Daftar Siswa Sekolah & Kelas</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
+          Pantau dan kelola seluruh siswa yang terdaftar berdasarkan tingkat kelas di LMS Bina Sejahtera
+        </p>
       </div>
 
-      {/* Metrics Row - Total + Grades breakdown */}
+      {/* Metrics Row - Total + Grades breakdown based on actual student sign-ups */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
         <div className="card card-padding" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -199,7 +124,7 @@ export default function TeacherStudentsPage() {
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{students.length}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total Siswa</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total Siswa Terdaftar</div>
           </div>
         </div>
 
@@ -239,7 +164,7 @@ export default function TeacherStudentsPage() {
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{countUnassigned}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{countUnassigned > 0 ? 'Belum Masuk Kelas' : 'Status Pembagian: Rapi'}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{countUnassigned > 0 ? 'Belum Masuk Kelas' : 'Status: Terpetakan'}</div>
           </div>
         </div>
       </div>

@@ -101,11 +101,6 @@ export default function AdminStudentsPage() {
 
       setStudents(profs);
       setClasses(clsList);
-
-      const unassigned = profs.filter(s => getStudentClassInfo(s, clsList).grade === null);
-      if (unassigned.length > 0) {
-        handleAutoAssign();
-      }
     } catch (e) {
       console.error(e);
     } finally {
