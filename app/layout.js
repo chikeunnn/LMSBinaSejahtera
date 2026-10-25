@@ -1,4 +1,5 @@
 import './globals.css';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata = {
   title: 'LMS Bina Sejahtera',
@@ -14,7 +15,10 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <SpeedInsights />
+      </body>
     </html>
   );
 }
